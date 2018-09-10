@@ -56,6 +56,9 @@ You may chain any of these methods onto your field's definition in order to inst
 Text::make('Name')->hideFromIndex()
 ```
 
+
+
+
 ## Field Panels
 
 If your resource contains many fields, your resource "detail" screen can become crowded. For that reason, you may choose to break up groups of fields into their own "panels":
@@ -121,8 +124,9 @@ Nova ships with a variety of field types. So, let's explore all of the available
 - [Boolean](#boolean-field)
 - [Code](#code-field)
 - [Country](#country-field)
+- [Currency](#currency-field)
 - [Date](#date-field)
-- [DateTime](#date-time-field)
+- [DateTime](#datetime-field)
 - [File](#file-field)
 - [Gravatar](#gravatar-field)
 - [ID](#id-field)
@@ -227,6 +231,18 @@ use Laravel\Nova\Fields\Country;
 Country::make('Country', 'country_code')
 ```
 
+### Currency Field
+
+The `Currency` field generates a `Number` field that is automatically displayed using PHP's `money_format` function. You may specify the display format using the `format` method; otherwise, the `%i` format will be used:
+
+```php
+use Laravel\Nova\Fields\Currency;
+
+Currency::make('Price')
+
+Currency::make('Price')->format('%.2n');
+```
+
 ### Date Field
 
 The `Date` field may be used to store a date value (without time). For more information about dates and timezones within Nova, check out the additional [date / timezone documentation](./date-fields.md):
@@ -264,7 +280,7 @@ The `Gravatar` field does not correspond to any column in your application's dat
 By default, the Gravatar URL will be generated based on the value of the model's `email` column. However, if your user's email addresses are not stored in the `email` column, you may pass a custom column name to the field's `make` method:
 
 ```php
-use Laravel\Nova\Fields\Gravtar;
+use Laravel\Nova\Fields\Gravatar;
 
 // Using the "email" column...
 Gravatar::make()
@@ -510,14 +526,53 @@ use Laravel\Nova\Fields\Trix;
 Trix::make('Biography')
 ```
 
-:::danger File Uploads
+#### File Uploads
 
-Nova does not currently support embedded file uploads within Trix fields.
-:::
+If you would like to allow users to drag-and-drop photos into the Trix field, chain the `withFiles` method onto the field's definition. When calling the `withFiles` method, you should pass the name of the [filesystem disk](https://laravel.com/docs/filesystem) that photos should be stored on:
+
+```php
+use Laravel\Nova\Fields\Trix;
+
+Trix::make('Biography')->withFiles('public')
+```
+
+In addition, you should define two database tables to store pending and persisted Trix uploads. To do so, create a migration with the following table definitions:
+
+```php
+Schema::create('nova_pending_trix_attachments', function (Blueprint $table) {
+    $table->increments('id');
+    $table->string('draft_id')->index();
+    $table->string('attachment');
+    $table->string('disk');
+    $table->timestamps();
+});
+
+Schema::create('nova_trix_attachments', function (Blueprint $table) {
+    $table->increments('id');
+    $table->string('attachable_type');
+    $table->unsignedInteger('attachable_id');
+    $table->string('attachment');
+    $table->string('disk');
+    $table->string('url')->index();
+    $table->timestamps();
+
+    $table->index(['attachable_type', 'attachable_id']);
+});
+```
+
+Finally, in your `app/Console/Kernel.php` file, you should register a [daily job](https://laravel.com/docs/scheduling) to prune any stale attachments from the pending attachments table and storage. Laravel Nova provides the job implementation needed to accomplish this:
+
+```php
+use Laravel\Nova\Trix\PruneStaleAttachments;
+
+$schedule->call(function () {
+    (new PruneStaleAttachments)();
+})->daily();
+```
 
 ## Computed Fields
 
-In addition to displaying fields that are associated with columns in your database, Nova allows you to create "computed fields". Computed fields may be used to display computed values that are not associated with a database column. These fields may be created by passing a callable (instead of a column name) as the second argument to the field's `make` method:
+In addition to displaying fields that are associated with columns in your database, Nova allows you to create "computed fields". Computed fields may be used to display computed values that are not associated with a database column. Since they are not associated with a database column, computed fields may not be `sortable`. These fields may be created by passing a callable (instead of a column name) as the second argument to the field's `make` method:
 
 ```php
 Text::make('Name', function () {
@@ -529,6 +584,16 @@ Text::make('Name', function () {
 
 As you may have noticed in the example above, you may use `$this` to access the resource's underlying model attributes and relationships.
 :::
+
+By default, Vue will escape the content of a computed field. If you need to render HTML content within the field, use the `asHtml` method:
+
+```php
+Text::make('Status', function () {
+    return view('partials.status', [
+        'is_passing' => $this->isPassing(),
+    ])->render();
+})->asHtml()
+```
 
 ## Customization
 

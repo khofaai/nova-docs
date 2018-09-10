@@ -57,6 +57,18 @@ module.exports = [
       'registering-metrics',
     ]),
   },
+  {
+    title: 'Customization',
+    collapsable: false,
+    children: prefix('customization', [
+      'localization',
+      'tools',
+      'resource-tools',
+      'cards',
+      'fields',
+      'frontend',
+    ]),
+  },
   // {
   //   title: 'Nova JS Reference',
   //   collapsable: false,

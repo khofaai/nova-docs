@@ -39,12 +39,14 @@ Route::post('/photo', function (Request $request) {
 Of course, once the file has been stored, you may retrieve it within your application using the Laravel `Storage` facade:
 
 ```php
-use Laravel\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 Storage::get($user->profile_photo);
 
 Storage::url($user->profile_photo);
 ```
+
+If you are using the `public` disk with the `local` driver, you should run the `php artisan storage:link` Artisan command to create a symbolic link from `public/storage` to `storage/app/public`. To learn more about file storage in Laravel, check out the [Laravel file storage documentation](https://laravel.com/docs/filesystem).
 
 :::tip Customization
 
@@ -63,12 +65,12 @@ Image::make('Profile Photo')->disk('public')
 
 ## Avatars
 
-The `Avatar` field behaves exactly like the `File` field; however, instead of only displaying the path to the file within the Nova dashboard, an `Avatar` field will show a thumbnail preview of the underlying file. All of the configuration and customization options of the `Image` field mirror that of the `File` field:
+The `Avatar` field behaves exactly like the `File` field; however, instead of only displaying the path to the file within the Nova dashboard, an `Avatar` field will show a thumbnail preview of the underlying file. All of the configuration and customization options of the `Avatar` field mirror that of the `File` field:
 
 ```php
-use Laravel\Nova\Fields\Image;
+use Laravel\Nova\Fields\Avatar;
 
-Image::make('Poster')->disk('public')
+Avatar::make('Poster')->disk('public')
 ```
 
 In addition to displaying a thumbnail preview of the underlying file, an `Avatar` field will also be automatically displayed in Nova search results. An `Avatar` field is not limited to "user" resources - you may attach `Avatar` fields to any resource within your Nova application:
@@ -114,7 +116,7 @@ public function fields(Request $request)
 One benefit of storing the original client filename is the ability to create file download responses using the original filename that was used to upload the file. For example, you may do something like the following in one of your application's routes:
 
 ```php
-use Laravel\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/download', function () {
     $user = $request->user();
@@ -228,7 +230,7 @@ If you would like to override this behavior and provide your own file deletion i
 
 ```php
 use Illuminate\Http\Request;
-use Laravel\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 File::make('Attachment')
     ->disk('s3')
@@ -265,7 +267,7 @@ The invokable object should be a simple PHP class with a single `__invoke` metho
 namespace App\Nova;
 
 use Illuminate\Http\Request;
-use Laravel\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 class DeleteAttachment
 {
@@ -301,7 +303,7 @@ The `preview` method accepts a callable which should return the preview URL. Wit
 
 ```php
 use Laravel\Nova\Fields\Image;
-use Laravel\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 Image::make('Profile Photo')
     ->disk('public')
@@ -325,7 +327,7 @@ The `thumbnail` method accepts a callable which should return the thumbnail URL.
 
 ```php
 use Laravel\Nova\Fields\Image;
-use Laravel\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 Image::make('Profile Photo')
     ->disk('public')

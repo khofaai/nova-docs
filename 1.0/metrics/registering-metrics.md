@@ -19,6 +19,34 @@ public function cards(Request $request)
 
 ## Resource Detail Metrics
 
+In addition to placing metrics on the resource index screen, you may also attach a metric to the resource detail screen. For example, if you are building a podcasting application, you may wish to display the total number of podcasts created by users over time. To instruct a metric to be displayed on the detail page instead of the index page, chain the `onlyOnDetail` method onto your metric registration:
+
+```php
+/**
+ * Get the cards available for the request.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return array
+ */
+public function cards(Request $request)
+{
+    return [
+        (new Metrics\PodcastCount)->onlyOnDetail(),
+    ];
+}
+```
+
+Of course, you will need to modify your metric's query to only gather metric data on the resource for which it is currently being displayed. To accomplish this, your metric's `calculate` method may access the `resourceId` property on the incoming `$request`:
+
+```php
+use App\Podcast;
+
+return $this->count(
+    $request,
+    Podcast::where('user_id', $request->resourceId)
+);
+```
+
 ## Dashboard Metrics
 
 You are not limited to displaying metrics on a resource's index screen. You are free to add metrics to your primary Nova "dashboard", which is the default page that Nova displays after login. By default, this screen displays some helpful links to the Nova documentation via the built-in `Help` card. To add a metric to your dashboard, add the metric to the array of cards returned by the `cards` method of your `app/Providers/NovaServiceProvider` class:
@@ -61,3 +89,48 @@ public function cards(Request $request)
     ];
 }
 ```
+
+## Authorization
+
+If you would like to only expose a given metric to certain users, you may chain the `canSee` method onto your metric registration. The `canSee` method accepts a Closure which should return `true` or `false`. The Closure will receive the incoming HTTP request:
+
+```php
+use App\User;
+
+/**
+ * Get the cards available for the resource.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return array
+ */
+public function cards(Request $request)
+{
+    return [
+        (new Metrics\UsersPerDay)->canSee(function ($request) {
+            return $request->user()->can('viewUsersPerDay', User::class);
+        }),
+    ];
+}
+```
+
+In the example above, we are using Laravel's `Authorizable` trait's `can` method on our `User` model to determine if the authorized user is authorized for the `viewUsersPerDay` action. However, since proxying to authorization policy methods is a common use-case for `canSee`, you may use the `canSeeWhen` method to achieve the same behavior. The `canSeeWhen` method has the same method signature as the `Illuminate\Foundation\Auth\Access\Authorizable` trait's `can` method:
+
+```php
+use App\User;
+
+/**
+ * Get the cards available for the resource.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return array
+ */
+public function cards(Request $request)
+{
+    return [
+        (new Metrics\UsersPerDay)->canSeeWhen(
+            'viewUsersPerDay', User::class
+        ),
+    ];
+}
+```
+
